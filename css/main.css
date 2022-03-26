@@ -1,0 +1,73 @@
+@font-face {
+  font-family: "Maian";
+  src: url("../assets/fonts/Poppins-Regular.ttf") format("truetype");
+}
+
+:root {
+  --color-primary: #8600db;
+  --color-secondary: #fbfbfe;
+  --box-shadow: 2.8px 2.8px 2.2px rgba(0, 0, 0, 0.02),
+    6.7px 6.7px 5.3px rgba(0, 0, 0, 0.028),
+    12.5px 12.5px 10px rgba(0, 0, 0, 0.035),
+    22.3px 22.3px 17.9px rgba(0, 0, 0, 0.042),
+    41.8px 41.8px 33.4px rgba(0, 0, 0, 0.05),
+    100px 100px 80px rgba(0, 0, 0, 0.07);
+}
+
+.theme-light {
+  --color-accent: #ffffff;
+  --color-accent2: #eeeeee;
+  --font-color: #2b2b2b;
+  --body-color: #f2fff8;
+}
+.theme-dark {
+  --color-accent: #1c1c1c;
+  --color-accent2: #383838;
+  --font-color: #ebebeb;
+  --body-color: #4a4e50;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+a {
+  text-decoration: none;
+}
+
+body {
+  font-family: "Poppins", Arial, Helvetica, sans-serif;
+}
+.app-container {
+  background-color: var(--body-color);
+  margin: 0;
+  padding: 0;
+}
+.wrapper {
+  display: flex;
+  padding: 5rem 2rem;
+  gap: 1rem;
+  min-height: 100vh;
+}
+.left {
+  flex: 1;
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+#canvas,
+#smallQr {
+  padding: 1rem;
+  background-color: #6969c7;
+}
+/*# sourceMappingURL=main.css.map */

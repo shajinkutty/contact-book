@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Extension Book</title>
+    <script src="./assets/js/babel.js"></script>
+    <script src="./assets/js/react.development.js"></script>
+    <script src="./assets/js/react-dom.development.js"></script>
+    <script src="./assets/js/sweetalert2.all.min.js"></script>
+    <script src="./db/contact-backup.json"></script>
+    <link
+      rel="stylesheet"
+      href="assets/web-fonts-with-css/css/fontawesome-all.min.css"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="assets/css/sweetalert2-dark.min.css" />
+    <link rel="stylesheet" href="css/main.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      class App extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {
+            searchValue: "",
+            isEdit: false,
+            inputs: {
+              firstName: "",
+              lastName: "",
+              mobileNumber: "",
+              extNumber: "",
+            },
+            darkTheme: JSON.parse(localStorage.getItem("theme")) || false,
+            contacts: JSON.parse(localStorage.getItem("contact-data")) || [],
+            error: false,
+          };
+        }
+        // randomHsl() {
+        //   return "hsla(" + Math.random() * 360 + ", 100%, 40%, 1)";
+        // }
+        hslToHex() {
+          const h = Math.floor(Math.random() * 360);
+          const s = 100;
+          let l = 40;
+          l /= 100;
+          const a = (s * Math.min(l, 1 - l)) / 100;
+          const f = (n) => {
+            const k = (n + h / 30) % 12;
+            const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+            return Math.round(255 * color)
+              .toString(16)
+              .padStart(2, "0"); // convert to Hex and prefix "0" if needed
+          };
+          return `#${f(0)}${f(8)}${f(4)}`;
+        }
+        handleChange = (e) => {
+          this.setState({
+            ...this.state,
+            inputs: {
+              ...this.state.inputs,
+              [e.target.name]: e.target.value,
+            },
+            error: false,
+          });
+        };
+        addNewContact = (inputs) => {
+          if (this.state.inputs.firstName === "" && !this.state.isEdit) {
+            document.getElementById("first-name").focus();
+            this.setState({
+              ...this.state,
+              error: true,
+            });
+          } else {
+            let newContact;
+            if (this.state.isEdit) {
+              const newContact = this.state.contacts.map((contact) =>
+                contact.id === this.state.inputs.id
+                  ? { ...this.state.inputs }
+                  : contact
+              );
+              this.setState({
+                ...this.state,
+                inputs: {
+                  firstName: "",
+                  lastName: "",
+                  mobileNumber: "",
+                  extNumber: "",
+                },
+                isEdit: false,
+                error: false,
+                contacts: newContact,
+              });
+              localStorage.setItem("contact-data", JSON.stringify(newContact));
+              console.log(newContact);
+            } else {
+              const uid =
+                Date.now().toString(36) + Math.random().toString(36).substr(2);
+              newContact = {
+                ...this.state.inputs,
+                id: uid,
+                hsl: this.hslToHex(),
+              };
+              this.setState({
+                ...this.state,
+                inputs: {
+                  firstName: "",
+                  lastName: "",
+                  mobileNumber: "",
+                  extNumber: "",
+                },
+                contacts: [...this.state.contacts, newContact],
+                error: false,
+              });
+              localStorage.setItem(
+                "contact-data",
+                JSON.stringify([...this.state.contacts, newContact])
+              );
+            }
+
+            Swal.fire({
+              icon: "success",
+              title: `${
+                this.state.isEdit
+                  ? "Contact has been updated"
+                  : "New contact has been added"
+              }`,
+            });
+          }
+        };
+
+        searchHandler = (val) => {
+          this.setState({ ...this.state, searchValue: val });
+        };
+        clearSearch = () => {
+          this.setState({ ...this.state, searchValue: "" });
+        };
+        toggleTheme = () => {
+          this.setState({ ...this.state, darkTheme: !this.state.darkTheme });
+          localStorage.setItem("theme", !this.state.darkTheme);
+        };
+
+        deleteContact = (id) => {
+          Swal.fire({
+            title: "Do you want to delete the contact?",
+            text: "You won't be able to revert this!",
+            showCancelButton: true,
+            confirmButtonText: "Yes",
+          }).then((result) => {
+            /* Read more about isConfirmed, isDenied below */
+            if (result.isConfirmed) {
+              const filterContact = this.state.contacts.filter(
+                (contact) => contact.id !== id
+              );
+              this.setState({
+                ...this.state,
+                contacts: filterContact,
+                isEdit: false,
+                inputs: {
+                  firstName: "",
+                  lastName: "",
+                  mobileNumber: "",
+                  extNumber: "",
+                },
+              });
+              localStorage.setItem(
+                "contact-data",
+                JSON.stringify(filterContact)
+              );
+              Swal.fire({
+                icon: "success",
+                title: "Deleted..!",
+              });
+            } else if (result.isDenied) {
+              Swal.fire("Changes are not saved", "", "info");
+            }
+          });
+        };
+        editContact = (id) => {
+          const selectedContact = this.state.contacts.filter(
+            (contact) => contact.id === id
+          );
+          this.setState({
+            ...this.state,
+            isEdit: true,
+            inputs: selectedContact[0],
+          });
+        };
+        exportJson = () => {
+          Swal.fire({
+            title: "Do you want to backup the contacts?",
+            showCancelButton: true,
+            confirmButtonText: "Yes",
+          }).then((result) => {
+            /* Read more about isConfirmed, isDenied below */
+            if (result.isConfirmed) {
+              // Creating a blob object from non-blob data using the Blob constructor
+              const blob = new Blob(
+                ["data = ", JSON.stringify(this.state.contacts)],
+                {
+                  type: "application/json",
+                }
+              );
+              const url = URL.createObjectURL(blob);
+              // Create a new anchor element
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "contact-backup";
+              a.click();
+              a.remove();
+              Swal.fire("Downloaded!", "Please keep the file safe.", "success");
+            } else if (result.isDenied) {
+              Swal.fire("Changes are not saved", "", "info");
+            }
+          });
+        };
+
+        uploadHandler = () => {
+          Swal.fire({
+            icon: "info",
+            text: "Please make sure that you have uploaded the backup file in the 'db' folder and the file name must be 'contact-backup'.",
+            showCancelButton: true,
+            confirmButtonText: "Continue",
+          }).then((result) => {
+            /* Read more about isConfirmed, isDenied below */
+            if (result.isConfirmed) {
+              try {
+                localStorage.setItem("contact-data", JSON.stringify(data));
+                this.setState({
+                  ...this.state,
+                  contacts: data,
+                });
+                Swal.fire("Saved!", "", "success");
+              } catch (error) {
+                Swal.fire({
+                  icon: "error",
+                  title: "Oops...",
+                  text: "Something went wrong! Please check your backup file",
+                });
+              }
+            } else if (result.isDenied) {
+              Swal.fire("Changes are not saved", "", "info");
+            }
+          });
+        };
+
+        clearForm = () => {
+          this.setState({
+            ...this.state,
+            inputs: {
+              firstName: "",
+              lastName: "",
+              mobileNumber: "",
+              extNumber: "",
+            },
+            isEdit: false,
+          });
+        };
+
+        render() {
+          return (
+            <div
+              className={`theme-${
+                this.state.darkTheme ? "dark" : "light"
+              } app-container`}
+            >
+              <Navbar
+                value={this.state.searchValue}
+                searchHandler={(val) => this.searchHandler(val)}
+                clearSearch={this.clearSearch}
+                toggleTheme={this.toggleTheme}
+                darkTheme={this.state.darkTheme}
+                exportJson={this.exportJson}
+              />
+              <div className="wrapper">
+                <ContactForm
+                  formInputs={this.state.inputs}
+                  handleChange={(e) => this.handleChange(e)}
+                  addNewContact={this.addNewContact}
+                  uploadHandler={this.uploadHandler}
+                  selectedContact={this.state.inputs}
+                  isEdit={this.state.isEdit}
+                  clearForm={this.clearForm}
+                  error={this.state.error}
+                />
+                <Contacts
+                  searchValue={this.state.searchValue}
+                  data={this.state.contacts}
+                  handleDelete={(id) => this.deleteContact(id)}
+                  handleEdit={(id) => this.editContact(id)}
+                />
+              </div>
+            </div>
+          );
+        }
+      }
+      class Navbar extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {
+            showClearButton: false,
+          };
+        }
+
+        componentDidMount() {
+          document.getElementById("search").focus();
+        }
+        render() {
+          const {
+            searchHandler,
+            value,
+            clearSearch,
+            toggleTheme,
+            darkTheme,
+            exportJson,
+          } = this.props;
+          return (
+            <nav>
+              <div className="nav-title">Contacts</div>
+              <div className="search-field">
+                <input
+                  type="text"
+                  value={value}
+                  id="search"
+                  placeholder="search.."
+                  onChange={(e) => {
+                    searchHandler(e.target.value);
+                    this.setState({
+                      showClearButton: e.target.value === "" ? false : true,
+                    });
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    clearSearch();
+                    this.setState({ showClearButton: false });
+                    document.getElementById("search").focus();
+                  }}
+                >
+                  {this.state.showClearButton && "x"}
+                </button>
+              </div>
+              <span className="theme-icon" onClick={toggleTheme}>
+                {darkTheme ? (
+                  <i className="fa fa-sun" aria-hidden="true" />
+                ) : (
+                  <i className="fa fa-moon" aria-hidden="true" />
+                )}
+              </span>
+              <span className="theme-icon" onClick={exportJson}>
+                <i className="fa fa-download" aria-hidden="true" />
+              </span>
+            </nav>
+          );
+        }
+      }
+      class ContactForm extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {
+            bgColor: "",
+          };
+        }
+
+        submitHandler = () => {
+          if (this.state.firstName === "" && !this.props.isEdit) {
+            document.getElementById("first-name").focus();
+          } else {
+            this.props.addNewContact(this.state);
+            this.setState({
+              bgColor: "",
+            });
+          }
+        };
+
+        render() {
+          const {
+            formInputs,
+            handleChange,
+            selectedContact,
+            uploadHandler,
+            isEdit,
+            addNewContact,
+            clearForm,
+            error,
+          } = this.props;
+          return (
+            <div className="left">
+              <div className="form-container">
+                <div className="header">
+                  <h3>{isEdit ? "Edit" : "Add"} Contact </h3>
+                  {isEdit && (
+                    <div>
+                      <div className="color-input">
+                        <input
+                          type="color"
+                          id="pick"
+                          name="hsl"
+                          onFocus={(e) => {
+                            this.setState({ bgColor: e.target.value });
+                          }}
+                          onChange={(e) => {
+                            handleChange(e);
+                            this.setState({ bgColor: e.target.value });
+                          }}
+                          value={
+                            this.state.bgColor === ""
+                              ? selectedContact.hsl
+                              : this.state.bgColor
+                          }
+                        />
+                        <label
+                          htmlFor="pick"
+                          style={{
+                            backgroundColor:
+                              this.state.bgColor === ""
+                                ? selectedContact.hsl
+                                : this.state.bgColor,
+                          }}
+                        ></label>
+                      </div>
+                      <i
+                        className="fa fa-minus-circle"
+                        aria-hidden="true"
+                        onClick={() => {
+                          this.setState({ bgColor: "" });
+                          clearForm();
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+                <div className="input-field">
+                  <label htmlFor="first-name">First Name</label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    id="first-name"
+                    style={{ border: error ? "1px solid red" : "" }}
+                    onChange={(e) => handleChange(e)}
+                    value={formInputs.firstName}
+                  />
+                </div>
+                <div className="input-field">
+                  <label htmlFor="Last-name">Last Name</label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    id="last-name"
+                    onChange={(e) => handleChange(e)}
+                    value={formInputs.lastName}
+                  />
+                </div>
+                <div className="input-field">
+                  <label htmlFor="mobile-number">Mobile Number</label>
+                  <input
+                    type="number"
+                    max="10"
+                    name="mobileNumber"
+                    id="mobile-number"
+                    onChange={(e) => handleChange(e)}
+                    value={formInputs.mobileNumber}
+                  />
+                </div>
+                <div className="input-field">
+                  <label htmlFor="Extension Number">Extension Number</label>
+                  <input
+                    type="number"
+                    name="extNumber"
+                    id="Extension Number"
+                    onChange={(e) => handleChange(e)}
+                    value={formInputs.extNumber}
+                  />
+                </div>
+
+                <button
+                  className="btn-submit"
+                  onClick={() => {
+                    this.setState({ bgColor: "" });
+
+                    addNewContact();
+                  }}
+                >
+                  {isEdit ? "Update" : "Submit"}
+                </button>
+                <button className="btn-upload" onClick={uploadHandler}>
+                  Upload <i className="fa fa-upload" aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          );
+        }
+      }
+      class Contacts extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {};
+        }
+        render() {
+          const { data, searchValue, handleDelete, handleEdit } = this.props;
+          const renderData = data.filter((item) => {
+            return (
+              item.firstName.toString().toLowerCase().indexOf(searchValue) >=
+                0 ||
+              item.lastName.toString().toLowerCase().indexOf(searchValue) >= 0
+            );
+          });
+
+          return (
+            <div className="contact-container">
+              <ul className="responsive-table">
+                <li className="table-header">
+                  <div className="col col-0"></div>
+                  <div className="col col-2" style={{ color: "#fff" }}>
+                    Name
+                  </div>
+                  <div className="col col-3" style={{ color: "#fff" }}>
+                    Mobile #
+                  </div>
+                  <div className="col col-4" style={{ color: "#fff" }}>
+                    Ext: #
+                  </div>
+                  <div className="col col-5"></div>
+                </li>
+
+                {data &&
+                  renderData.map((contact) => (
+                    <Contact
+                      key={contact.id}
+                      {...contact}
+                      handleDelete={handleDelete}
+                      handleEdit={handleEdit}
+                    />
+                  ))}
+              </ul>
+            </div>
+          );
+        }
+      }
+      class Contact extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = {
+            selectedColor: "",
+          };
+        }
+
+        formateMobileNumber = (number) => {
+          if (number === "") {
+            return "-";
+          }
+          let newNumber = number[0];
+          for (let i = 1; i < number.length; i++) {
+            if (i == 2 || i == 5) {
+              newNumber += number[i] + " ";
+            } else {
+              newNumber += number[i];
+            }
+          }
+
+          return newNumber;
+        };
+        render() {
+          const {
+            id,
+            firstName,
+            lastName,
+            mobileNumber,
+            extNumber,
+            hsl,
+            handleDelete,
+            handleEdit,
+          } = this.props;
+          return (
+            <li className="table-row">
+              <div
+                className="col col-1 color-picker"
+                style={{ backgroundColor: hsl }}
+              >
+                <div className="avatar">
+                  {firstName[0]}
+                  {lastName[0]}
+                </div>
+              </div>
+              <div className="col col-2">
+                {firstName} {lastName}
+              </div>
+              <div className="col col-3">
+                {this.formateMobileNumber(mobileNumber)}
+              </div>
+              <div
+                className="col col-4"
+                style={{ color: hsl, fontSize: "1.2rem" }}
+              >
+                {extNumber}
+              </div>
+              <div className="col col-5" data-label="Payment Status">
+                <span className="control-icon" onClick={() => handleEdit(id)}>
+                  <i className="fa fa-edit" aria-hidden="true" />
+                </span>
+                <span className="control-icon" onClick={() => handleDelete(id)}>
+                  <i className="fa fa-trash" aria-hidden="true" />
+                </span>
+              </div>
+            </li>
+          );
+        }
+      }
+
+      ReactDOM.render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
